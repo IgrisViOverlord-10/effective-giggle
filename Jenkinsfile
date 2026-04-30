@@ -51,16 +51,21 @@ pipeline {
             }
         }
 
-        stage('Upload to Nexus') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
-                    sh '''
-                    curl -v -u $NEXUS_USER:$NEXUS_PASS --upload-file target/*.jar \
-                    $NEXUS_URL/repository/$NEXUS_REPO/spring-petclinic.jar
-                    '''
-                }
-            }
+stage('Upload to Nexus') {
+    steps {
+        withCredentials([usernamePassword(
+            credentialsId: 'nexus-creds',
+            usernameVariable: 'NEXUS_USER',
+            passwordVariable: 'NEXUS_PASS'
+        )]) {
+            sh '''
+            curl -v -u $NEXUS_USER:$NEXUS_PASS \
+            --upload-file target/spring-petclinic-4.0.0-SNAPSHOT.jar \
+            http://13.204.63.137:8081/repository/Maven_repository/org/springframework/samples/spring-petclinic/4.0.0-SNAPSHOT/spring-petclinic-4.0.0-SNAPSHOT.jar
+            '''
         }
+    }
+}
 
         stage('Deploy to Tomcat') {
             steps {
