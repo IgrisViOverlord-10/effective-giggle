@@ -59,9 +59,9 @@ stage('Upload to Nexus') {
             passwordVariable: 'NEXUS_PASS'
         )]) {
             sh '''
-            curl -v -u $NEXUS_USER:$NEXUS_PASS \
+            curl -v -u admin:$NEXUS_PASS \
             --upload-file target/spring-petclinic-4.0.0-SNAPSHOT.jar \
-            http://13.204.63.137:8081/repository/Maven_repository/org/springframework/samples/spring-petclinic/4.0.0-SNAPSHOT/spring-petclinic-4.0.0-SNAPSHOT.jar
+            http://13.204.63.137:8081/repository/maven_repository_101/org/springframework/samples/spring-petclinic/4.0.0-SNAPSHOT/spring-petclinic-4.0.0-SNAPSHOT.jar
             '''
         }
     }
