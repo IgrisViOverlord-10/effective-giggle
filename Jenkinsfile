@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     tools {
-        jdk 'Java21'   // ⚠️ FIXED (you saw error: JDK21 not configured)
-        maven 'Maven3'
+    jdk 'Java21'
+    maven 'Maven'
     }
 
     environment {
