@@ -14,12 +14,6 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/IgrisViOverlord-10/effective-giggle.git'
-            }
-        }
-
         stage('Build & Test') {
             steps {
                 sh 'mvn clean verify -Dcheckstyle.skip=true'
@@ -42,9 +36,7 @@ pipeline {
 
         stage('Trivy FS Scan') {
             steps {
-                sh '''
-                trivy fs --exit-code 0 --severity HIGH,CRITICAL .
-                '''
+                sh 'trivy fs --exit-code 0 --severity HIGH,CRITICAL .'
             }
         }
 
@@ -52,7 +44,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
-                    curl -v -u $USER:$PASS --upload-file target/spring-petclinic-4.0.0-SNAPSHOT.jar \
+                    curl -u $USER:$PASS --upload-file target/spring-petclinic-4.0.0-SNAPSHOT.jar \
                     $NEXUS_URL/repository/maven-releases/org/springframework/samples/petclinic/4.0.0/petclinic.jar
                     '''
                 }
@@ -63,7 +55,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'tomcat-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh '''
-                    curl -v -u $USER:$PASS \
+                    curl -u $USER:$PASS \
                     --upload-file target/spring-petclinic-4.0.0-SNAPSHOT.jar \
                     "$TOMCAT_URL/manager/text/deploy?path=/petclinic&update=true"
                     '''
