@@ -2,21 +2,22 @@ pipeline {
     agent any
 
     tools {
-    jdk 'Java21'
-    maven 'Maven'
+        maven 'Maven'
+        jdk 'Java21'
     }
 
     environment {
-        SONAR_HOME = tool 'SonarQube'
-        NEXUS_URL = 'http://localhost:8081'
-        DOCKER_IMAGE = 'petclinic-app'
+        SONAR_PROJECT_KEY = 'petclinic'
+        NEXUS_URL = 'http://13.204.63.137:8081'
+        NEXUS_REPO = 'maven_repository_101'
+        TOMCAT_URL = 'http://3.108.40.229:8080'
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/IgrisViOverlord-10/effective-giggle.git', branch: 'main'
+                git branch: 'main', url: 'https://github.com/IgrisViOverlord-10/effective-giggle.git'
             }
         }
 
@@ -28,12 +29,10 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
+                withSonarQubeEnv('SonarQube') {   // ✅ FIXED NAME (must match Jenkins UI)
                     sh '''
-                        mvn sonar:sonar \
-                        -Dsonar.projectKey=petclinic \
-                        -Dsonar.host.url=http://localhost:9000 \
-                        -Dsonar.login=$SONAR_TOKEN
+                    mvn sonar:sonar \
+                    -Dsonar.projectKey=$SONAR_PROJECT_KEY
                     '''
                 }
             }
@@ -41,32 +40,43 @@ pipeline {
 
         stage('Trivy FS Scan') {
             steps {
-                sh '''
-                    trivy fs . > trivy-report.txt
-                '''
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build -t $DOCKER_IMAGE .'
+                script {
+                    try {
+                        sh 'trivy fs --exit-code 0 --no-progress .'
+                    } catch (Exception e) {
+                        echo "Trivy not installed — skipping"
+                    }
+                }
             }
         }
 
         stage('Upload to Nexus') {
             steps {
-                sh '''
-                    echo "Uploading artifact to Nexus..."
-                    mvn deploy -DskipTests
-                '''
+                withCredentials([usernamePassword(credentialsId: 'nexus-creds',
+                        usernameVariable: 'NEXUS_USER',
+                        passwordVariable: 'NEXUS_PASS')]) {
+
+                    sh '''
+                    curl -v -u $NEXUS_USER:$NEXUS_PASS \
+                    --upload-file target/spring-petclinic-4.0.0-SNAPSHOT.jar \
+                    $NEXUS_URL/repository/maven_repository_101/org/springframework/samples/spring-petclinic/4.0.0-SNAPSHOT/spring-petclinic.jar
+                    '''
+                }
             }
         }
 
         stage('Deploy to Tomcat') {
             steps {
-                sh '''
-                    cp target/*.war /opt/tomcat/webapps/petclinic.war
-                '''
+                withCredentials([usernamePassword(credentialsId: 'tomcat-creds',
+                        usernameVariable: 'TOMCAT_USER',
+                        passwordVariable: 'TOMCAT_PASS')]) {
+
+                    sh '''
+                    curl -v -u $TOMCAT_USER:$TOMCAT_PASS \
+                    -T target/spring-petclinic-4.0.0-SNAPSHOT.jar \
+                    "$TOMCAT_URL/manager/text/deploy?path=/petclinic&update=true"
+                    '''
+                }
             }
         }
     }
